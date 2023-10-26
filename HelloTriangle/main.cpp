@@ -59,7 +59,7 @@ class HelloTriangleApplication
         {
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
                 // Message is important enough to show
-                
+                std::cout << pCallbackData->pMessage << std::endl;
             }
             std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
@@ -123,7 +123,7 @@ class HelloTriangleApplication
         }
 
         /**
-         * Create an instance to optimize our specific application.
+         * Create a vulkan instance to optimize our specific application.
         */
         void createInstance()
         {
@@ -146,11 +146,16 @@ class HelloTriangleApplication
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
             createInfo.ppEnabledExtensionNames = extensions.data();
             
+            VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
             if (enableValidationLayers) {
                 createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
                 createInfo.ppEnabledLayerNames = validationLayers.data();
+
+                populateDebugMessengerCreateInfo(debugCreateInfo);
+                createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
             } else {
                 createInfo.enabledLayerCount = 0;
+                createInfo.pNext = nullptr;
             }
 
             if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
@@ -172,12 +177,30 @@ class HelloTriangleApplication
         }
         
         /**
-         * initialize a Vulkan instance.
+         * Initialize a Vulkan instance.
         */
         void initVulkan()
         {
             createInstance();
             setupDebugMessenger();
+        }
+
+
+        /**
+         * Create a separate debug utils messenger specifically for 
+         * vkCreateInstance and vkDestroyInstance
+        */
+        void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
+        {
+            createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+            createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            createInfo.pfnUserCallback = debugCallback;
         }
 
         /**
@@ -190,13 +213,7 @@ class HelloTriangleApplication
             if (!enableValidationLayers) return;
 
             VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-            createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-            createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-            createInfo.pfnUserCallback = debugCallback;
-            createInfo.pUserData = nullptr;
+            populateDebugMessengerCreateInfo(createInfo);
 
             if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
                 throw std::runtime_error("failed to setup the debug messenger!"); 
